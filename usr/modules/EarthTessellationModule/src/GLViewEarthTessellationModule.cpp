@@ -120,29 +120,29 @@ void GLViewEarthTessellationModule::onKeyDown(const SDL_KeyboardEvent& key)
         this->setNumPhysicsStepsPerRender(1);
 
     if (key.keysym.sym == SDLK_1) {
+        MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
+
         // toggle render mode between triangles and lines
+        bool useLines = !mod->isUsingLines();
+        mod->useLines(useLines);
+
+        std::cout << "Using " << (useLines ? "lines" : "triangles") << std::endl;
+    } else if (key.keysym.sym == SDLK_UP || key.keysym.sym == SDLK_DOWN) {
         MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
-        mod->useLines(!mod->isUsingLines());
-    } else if (key.keysym.sym == SDLK_UP) {
-        // increase scale factor
+
+        // increase/decrease scale factor
+        float newSF = mod->getScaleFactor() * (key.keysym.sym == SDLK_UP ? 1.05f : 0.95f);
+        mod->setScaleFactor(newSF);
+
+        std::cout << "Scale factor: " << newSF << std::endl;
+    } else if (key.keysym.sym == SDLK_RIGHT || key.keysym.sym == SDLK_LEFT) {
         MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
-        mod->setScaleFactor(mod->getScaleFactor() * 1.05f);
-        std::cout << mod->getScaleFactor() << std::endl;
-    } else if (key.keysym.sym == SDLK_DOWN) {
-        // decrease scale factor
-        MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
-        mod->setScaleFactor(std::max(0.0f, mod->getScaleFactor() * 0.95f));
-        std::cout << mod->getScaleFactor() << std::endl;
-    } else if (key.keysym.sym == SDLK_RIGHT) {
-        // increase tessellation factor
-        MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
-        mod->setTessellationFactor(mod->getTessellationFactor() + 0.25f);
-        std::cout << mod->getTessellationFactor() << std::endl;
-    } else if (key.keysym.sym == SDLK_LEFT) {
-        // decrease tessellation factor
-        MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
-        mod->setTessellationFactor(std::max(0.0f, mod->getTessellationFactor() - 0.25f));
-        std::cout << mod->getTessellationFactor() << std::endl;
+
+        // increase/decrease tessellation factor
+        float newTF = mod->getTessellationFactor() + (key.keysym.sym == SDLK_RIGHT ? 0.25f : -0.25f);
+        mod->setTessellationFactor(newTF);
+
+        std::cout << "Tessellation factor: " << newTF << std::endl;
     }
 }
 
@@ -214,9 +214,14 @@ void Aftr::GLViewEarthTessellationModule::loadMap()
     std::string dataset = ManagerEnvironmentConfiguration::getLMM() + "/images/ETOPO1_Ice_g_geotiff.tif";
     std::string imagery = ManagerEnvironmentConfiguration::getLMM() + "/images/2_no_clouds_16k.jpg";
 
+    // create earth WO
     earth = WO::New();
+
+    // create and use earth model
     earth->setModel(new MGLEarthQuad(earth, Vector(90.0f, -180.0f, 0.0f), Vector(-90.0f, 180.0f, 0.0f),
         NUM_TILES_X, NUM_TILES_Y, INIT_SCALE_FACTOR, INIT_TESS_FACTOR, dataset, imagery));
-    earth->setPosition(Vector(0.0, 0.0, 0.0));
+    earth->setPosition(Vector(0.0, 0.0, 0.0)); // center earth at origin of world
+
+    // add to world
     worldLst->push_back(earth);
 }

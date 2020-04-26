@@ -3,7 +3,7 @@
 #for extending and debugging CMake scripts.
 INCLUDE( CMakePackageConfigHelpers )
 cmake_minimum_required(VERSION 3.3.0 FATAL_ERROR)
-PROJECT( "EarthModule" ) #This command populates CMAKE_SIZEOF_VOID_P and should be one of the first commands in the file
+PROJECT( "EarthTessellationModule" ) #This command populates CMAKE_SIZEOF_VOID_P and should be one of the first commands in the file
 
 #These are the files that will appear in the output project (ie, in MSVC, this will be in the vcxproj)
 #All cpp files that ought to be compiled in this project must be included here

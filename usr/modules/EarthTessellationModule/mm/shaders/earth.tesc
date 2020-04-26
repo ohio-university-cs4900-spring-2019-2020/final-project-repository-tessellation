@@ -11,6 +11,7 @@ uniform mat4 MVPMat;
 
 uniform isampler2D elevationTexture;
 
+// need the camera projection for the tess level heuristic
 layout ( binding = 0, std140 ) uniform CameraTransforms
 {
    mat4 View;
@@ -22,10 +23,12 @@ layout ( binding = 0, std140 ) uniform CameraTransforms
    int ShadowMapShadingState;
 } Cam;
 
+// constants used in conversion from WGS84
 const float EARTH_RADIUS = 6378137.0;
 const float EARTH_FLATTENING = 0.00669437999013;
 const float PI = 3.14159265358979323846;
 
+// convert from WGS84 to ECEF
 vec3 WGS84ToECEF(vec3 v) {
 	float latRad = v.x;
 	float lonRad = v.y;
@@ -45,10 +48,12 @@ vec3 WGS84ToECEF(vec3 v) {
 	return o;
 }
 
+// sample elevation texture at UV coordinate
 float getElev(vec2 uv) {
-	return float(texture(elevationTexture, uv).r) * 50.0;
+	return float(texture(elevationTexture, uv).r) * 10.0;
 }
 
+// convert WGS84 to UV space of elevation texture
 vec2 WGS84ToUV(vec2 v) {
 	vec2 uv;
 	uv.x = (v.y + PI) / (2 * PI);
@@ -57,6 +62,7 @@ vec2 WGS84ToUV(vec2 v) {
 	return uv;
 }
 
+// calculate the tess level for an edge between a and b
 float tessLevel(vec3 a, vec3 b) {
 	float diameter = distance(a, b);
 	vec3 center = (a + b) / 2.0;
@@ -65,35 +71,42 @@ float tessLevel(vec3 a, vec3 b) {
 	return abs(diameter * Cam.Projection[1][1] / screenPos.w) * tessellationFactor;
 }
 
-float clamp_factor(float f) {
+// clamp tess factor in range [1, 64]
+float clampFactor(float f) {
 	return clamp(f, 1.0, 64.0);
 }
 
 void main() {
+	// pass WGS84 coords through
 	vTPos[gl_InvocationID] = vPos[gl_InvocationID];
 
 	if (gl_InvocationID == 0) {
+		// get UV coordinates for each vertex of quad
 		vec2 uv0 = WGS84ToUV(vPos[0]);
 		vec2 uv1 = WGS84ToUV(vPos[1]);
 		vec2 uv2 = WGS84ToUV(vPos[2]);
 		vec2 uv3 = WGS84ToUV(vPos[3]);
 
+		// get ECEF coordinates for each vertex of quad
 		vec3 v0 = WGS84ToECEF(vec3(vPos[0], getElev(uv0)));
 		vec3 v1 = WGS84ToECEF(vec3(vPos[1], getElev(uv1)));
 		vec3 v2 = WGS84ToECEF(vec3(vPos[2], getElev(uv2)));
 		vec3 v3 = WGS84ToECEF(vec3(vPos[3], getElev(uv3)));
 
+		// calculate tess level for each edge
 		float e0 = tessLevel(v0, v1);
 		float e1 = tessLevel(v1, v2);
 		float e2 = tessLevel(v2, v3);
 		float e3 = tessLevel(v3, v0);
 
-		gl_TessLevelOuter[0] = clamp_factor(e0);
-		gl_TessLevelOuter[1] = clamp_factor(e1);
-		gl_TessLevelOuter[2] = clamp_factor(e2);
-		gl_TessLevelOuter[3] = clamp_factor(e3);
+		// pass edge tess levels out
+		gl_TessLevelOuter[0] = clampFactor(e0);
+		gl_TessLevelOuter[1] = clampFactor(e1);
+		gl_TessLevelOuter[2] = clampFactor(e2);
+		gl_TessLevelOuter[3] = clampFactor(e3);
 
-        gl_TessLevelInner[0] = clamp_factor((e1 + e3) / 2.0);
-        gl_TessLevelInner[1] = clamp_factor((e0 + e2) / 2.0);
+		// pass inner tess levels out as average of their opposite edges
+        gl_TessLevelInner[0] = clampFactor((e1 + e3) / 2.0);
+        gl_TessLevelInner[1] = clampFactor((e0 + e2) / 2.0);
 	}
 }

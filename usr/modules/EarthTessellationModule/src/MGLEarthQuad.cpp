@@ -3,13 +3,13 @@
 #include "GLSLEarthShader.h"
 #include "GLSLUniform.h"
 
-#include "ManagerTexture.h"
 #include "ManagerEnvironmentConfiguration.h"
+#include "ManagerTexture.h"
 
 #ifdef AFTR_CONFIG_USE_GDAL // this class won't work without GDAL
 
-#include "gdal_priv.h"
 #include "cpl_conv.h"
+#include "gdal_priv.h"
 
 using namespace Aftr;
 
@@ -52,7 +52,7 @@ MGLEarthQuad::~MGLEarthQuad()
 
 void MGLEarthQuad::render(const Camera& cam)
 {
-    
+
     this->getModelDataShared()->getModelMeshes().at(0)->getSkin().getShader()->getUniforms()->at(1)->set(this->scale);
     this->getModelDataShared()->getModelMeshes().at(0)->getSkin().getShader()->getUniforms()->at(2)->set(this->tessellationFactor);
     Model::render(cam);
@@ -188,7 +188,8 @@ void MGLEarthQuad::loadImageryTexture(const std::string& imagery)
     imageryTex = ManagerTexture::loadTexture(imagery);
 }
 
-void MGLEarthQuad::loadElevationTexture(const std::string& dataset) {
+void MGLEarthQuad::loadElevationTexture(const std::string& dataset)
+{
     GDALAllRegister(); // initialize GDAL
 
     // load dataset

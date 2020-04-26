@@ -1,6 +1,6 @@
 #version 330 core
 in vec3 fPos;
-in vec2 fLat;
+in float fLat;
 
 out vec4 fragColor;
 
@@ -10,6 +10,11 @@ uniform sampler2D imageryTexture;
 const float PI = 3.14159265358979323846;
 
 void main() {
+	// The lattitude is simply read as an interpolated value into this shader, but we
+	// do need to "flip" it because the imagery texture is inverted on the Y axis compared
+	// to the elevation texture.
+	float fLat = 1.0 - fLat;
+
 	// The longitude cannot be simply passed as an interpolated variable into this shader
 	// stage from the geometry shader due to it breaking down at the poles. However, it
 	// can easily be recalculated from the localized ECEF position of this fragment.
