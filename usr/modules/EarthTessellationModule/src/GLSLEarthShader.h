@@ -7,8 +7,16 @@
 namespace Aftr {
 class Model;
 
+/**
+   This class provides a shader for rendering tessellated Earth quads.
+*/
 class GLSLEarthShader : public GLSLShader {
 public:
+    /** Constructor for creating an Earth shader.
+        useLines - Whether or not to render using lines. If false, will render with triangles.
+        scale - The scale factor for the Earth
+        tess - The tessellation factor applied to the LOD scheme. Higher value = more tessellation.
+    */
     static GLSLEarthShader* New(bool useLines, float scale, float tess);
     static GLSLEarthShader* New(GLSLShaderDataShared* shdrData);
     virtual ~GLSLEarthShader();
@@ -16,9 +24,13 @@ public:
 
     GLSLEarthShader& operator=(const GLSLEarthShader& shader);
 
+    // Sets the Model View Projection matrix.
     virtual void setMVPMatrix(const Mat4& mvpMatrix);
 
+    // Sets the Earth scale factor.
     void setScaleFactor(float s);
+
+    // Sets the tessellation factor.
     void setTessellationFactor(float t);
 
     /**

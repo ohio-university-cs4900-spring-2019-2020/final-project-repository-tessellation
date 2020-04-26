@@ -105,14 +105,18 @@ void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRigh
     std::unique_ptr<ModelMeshRenderDataGenerator> data = std::make_unique<ModelMeshRenderDataGenerator>();
     data->setIndexTopology(GL_PATCHES);
 
+    // generate patch vertices
     for (unsigned int x = 0; x <= numTilesX; ++x) {
+        // calculate the lattitude at this subdivison level
         float lat = upperLeft.x + (lowerRight.x - upperLeft.x) * static_cast<float>(x) / numTilesX;
         float latRad = lat * Aftr::DEGtoRAD;
 
         for (unsigned int y = 0; y <= numTilesY; ++y) {
+            // calculate the longitude at this subdivision level
             float lon = upperLeft.y + (lowerRight.y - upperLeft.y) * static_cast<float>(y) / numTilesY;
             float lonRad = lon * Aftr::DEGtoRAD;
 
+            // combine lat and lon into WGS84 coordinate
             data->getVerts()->push_back(Vector(latRad, lonRad, 0.0f));
         }
     }
@@ -134,26 +138,6 @@ void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRigh
             data->getIndicies()->push_back(ur);
         }
     }
-
-    /*int step = 1;
-    for (int x = 90; x >= -90; x -= step) {
-        for (int y = -180; y <= 180; y += step) {
-            Vector v(x * Aftr::DEGtoRAD, y * Aftr::DEGtoRAD, 0);
-            data->getVerts()->push_back(v);
-
-            if (x != 90 && y != -180) {
-                unsigned int x_ind1 = -(x - 90) / step - 1;
-                unsigned int y_ind1 = (y + 180) / step - 1;
-                unsigned int x_ind2 = x_ind1 + 1;
-                unsigned int y_ind2 = y_ind1 + 1;
-
-                data->getIndicies()->push_back(x_ind1 * (360 / step + 1) + y_ind1);
-                data->getIndicies()->push_back(x_ind2 * (360 / step + 1) + y_ind1);
-                data->getIndicies()->push_back(x_ind2 * (360 / step + 1) + y_ind2);
-                data->getIndicies()->push_back(x_ind1 * (360 / step + 1) + y_ind2);
-            }
-        }
-    }*/
 
     // create triangle skin
     ModelMeshSkin skin1;
@@ -181,6 +165,9 @@ void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRigh
 
     // add skin2 to the mesh data
     this->getModelDataShared()->getModelMeshes().at(0)->addSkin(skin2);
+
+    // Note that mesh is deallocated when this function returns, but that's okay because
+    // the constructor of ModelDataShared actually makes a copy of it.
 }
 
 void MGLEarthQuad::loadImageryTexture(const std::string& imagery)
