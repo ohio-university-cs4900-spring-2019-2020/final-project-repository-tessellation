@@ -51,7 +51,7 @@ vec3 WGS84ToECEF(vec3 v) {
 
 // sample elevation texture at UV coordinate
 float getElev(vec2 uv) {
-	return float(texture(elevationTexture, uv).r) * 10.0;
+	return float(texture(elevationTexture, uv).r) * 10.0; // exaggerate elevation by one magnitude of 10
 }
 
 // convert WGS84 to UV space of elevation texture

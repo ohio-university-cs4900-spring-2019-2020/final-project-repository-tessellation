@@ -5,6 +5,7 @@
 
 #include "ManagerEnvironmentConfiguration.h"
 #include "ManagerTexture.h"
+#include "Texture.h"
 
 #ifdef AFTR_CONFIG_USE_GDAL // this class won't work without GDAL
 
@@ -221,12 +222,83 @@ void MGLEarthQuad::loadElevationTexture(const std::string& dataset)
     // close the dataset since we're now done
     GDALClose(poDataset);
 
-    // create OpenGL texture from our tightly packed data
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    elevTex = ManagerTexture::loadDynamicTexture(GL_TEXTURE_2D, 0, nXSize, nYSize, GL_R16I, 0, GL_RED_INTEGER, GL_SHORT, pafScanline);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    // Now manually create OpenGL texture using 4.2 features and generate mipmaps manually
+    // (Because apparently OpenGL doesn't support mipmaps for integer textures, at least not on my
+    //  hardware.)
 
-    CPLFree(pafScanline); // we no longer need the data, so free it
+    // calculate number of mipmap levels to generate (including base level)
+    unsigned int numLevels = 1 + static_cast<unsigned int>(std::log2(std::max(nXSize, nYSize)));
+
+    // generate texture
+    GLuint texID;
+    glGenTextures(1, &texID);
+
+    // bind texture
+    glBindTexture(GL_TEXTURE_2D, texID);
+
+    // set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    // use tightly packed data
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // allocate space for all texture levels (OpenGL 4.2+ only)
+    glTexStorage2D(GL_TEXTURE_2D, numLevels, GL_R16I, nXSize, nYSize);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, nXSize, nYSize, GL_RED_INTEGER, GL_SHORT, pafScanline); // upload base level
+
+    // generate mipmap levels
+    unsigned int dWidth = nXSize;
+    unsigned int dHeight = nYSize;
+    unsigned int level = 0;
+    GLshort* source = pafScanline;
+    while (dWidth > 1 || dHeight > 1) {
+        unsigned int sWidth = dWidth; // keep source width
+
+        dWidth = std::max(dWidth / 2, 1u);
+        dHeight = std::max(dHeight / 2, 1u);
+
+        // allocate space for dest data
+        GLshort* dest = static_cast<GLshort*>(CPLMalloc(sizeof(GLshort) * dWidth * dHeight));
+
+        // downscale the source data and put into dest
+        for (unsigned int j = 0; j < dHeight; ++j) {
+            for (unsigned int i = 0; i < dWidth; ++i) {
+                // take the average of the 4 pixels in the source image that make up this one pixel in
+                // the dest image. (Do summation as integer to avoid short overflow).
+                int sum = source[j * 2 * sWidth + i * 2];
+                sum += source[(j * 2 + 1) * sWidth + i * 2];
+                sum += source[j * 2 * sWidth + i * 2 + 1];
+                sum += source[(j * 2 + 1) * sWidth + i * 2 + 1];
+
+                dest[j * dWidth + i] = static_cast<GLshort>(sum / 4);
+            }
+        }
+
+        level++; // increment mipmap level
+
+        // send to OpenGL
+        glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, dWidth, dHeight, GL_RED_INTEGER, GL_SHORT, dest);
+
+        CPLFree(source); // we no longer need the source data, free it
+        source = dest; // calculate next level from this dest
+    }
+
+    CPLFree(source); // free the final level
+
+    // generate CPU side texture data
+    TextureDataOwnsGLHandle* tex = new TextureDataOwnsGLHandle("DynamicTexture");
+    tex->isMipmapped(true);
+    tex->setTextureDimensionality(GL_TEXTURE_2D);
+    tex->setGLInternalFormat(GL_R16I);
+    tex->setGLRawTexelFormat(GL_RED_INTEGER);
+    tex->setGLRawTexelType(GL_SHORT);
+    tex->setTextureDimensions(nXSize, nYSize);
+    tex->setGLTex(texID);
+
+    elevTex = new TextureOwnsTexDataOwnsGLHandle(tex);
 }
 
 #endif // AFTR_CONFIG_USE_GDAL
