@@ -1,4 +1,5 @@
 #include "GLSLEarthShader.h"
+
 #include "Camera.h"
 #include "GLSLAttribute.h"
 #include "GLSLShaderDescriptor.h"
@@ -7,6 +8,7 @@
 #include "ManagerEnvironmentConfiguration.h"
 #include "ManagerShader.h"
 #include "Model.h"
+
 using namespace Aftr;
 
 GLSLEarthShader* GLSLEarthShader::New(bool useLines, float scale, float tess, float maxTess)
