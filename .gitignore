@@ -1,0 +1,6 @@
+# Prevent builds from being committed
+usr/modules/EarthTessellationModule/cwin*/
+
+# Prevent large data from being committed
+usr/modules/EarthTessellationModule/mm/images/ETOPO1_Ice_g_geotiff.tif
+usr/modules/EarthTessellationModule/mm/images/2_no_clouds_16k.jpg
