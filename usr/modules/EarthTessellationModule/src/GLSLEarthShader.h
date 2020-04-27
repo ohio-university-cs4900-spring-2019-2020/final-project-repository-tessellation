@@ -16,8 +16,9 @@ public:
         useLines - Whether or not to render using lines. If false, will render with triangles.
         scale - The scale factor for the Earth
         tess - The tessellation factor applied to the LOD scheme. Higher value = more tessellation.
+        maxTess - The tessellation factor cap (maximum value) when applying LOD.
     */
-    static GLSLEarthShader* New(bool useLines, float scale, float tess);
+    static GLSLEarthShader* New(bool useLines, float scale, float tess, float maxTess);
     static GLSLEarthShader* New(GLSLShaderDataShared* shdrData);
     virtual ~GLSLEarthShader();
     virtual void bind(const Mat4& modelMatrix, const Mat4& normalMatrix, const Camera& cam, const ModelMeshSkin& skin);
@@ -32,6 +33,9 @@ public:
 
     // Sets the tessellation factor.
     void setTessellationFactor(float t);
+
+    // Sets the max tessellation factor.
+    void setMaxTessellationFactor(float m);
 
     /**
       Returns a copy of this instance. This is identical to invoking the copy constructor with
@@ -50,6 +54,7 @@ public:
 protected:
     float scaleFactor;
     float tessellationFactor;
+    float maxTessellationFactor;
 
     GLSLEarthShader(GLSLShaderDataShared* dataShared);
     GLSLEarthShader(const GLSLEarthShader&);

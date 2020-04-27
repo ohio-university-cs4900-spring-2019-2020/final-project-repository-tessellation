@@ -20,11 +20,12 @@ public:
         nTilesY - The number of tiles to subdivide the quad into on the y axis (longitude).
         s - The scale factor for the Earth.
         tess - The tessellation factor used for each tile.
+        maxTess - The tessellation factor max value for the LOD.
         elev - The path to the elevation dataset file used for displacement of the Earth's surface.
         imagery - The path to the imagery file of the Earth's surface used for texturing.
     */
     MGLEarthQuad(WO* parentWO, const Vector& ul, const Vector& lr, unsigned int nTilesX, unsigned int nTilesY,
-        float s, float tess, const std::string& elev, const std::string& imagery);
+        float s, float tess, float maxTess, const std::string& elev, const std::string& imagery);
     virtual ~MGLEarthQuad();
     virtual void render(const Camera& cam);
     virtual void renderSelection(const Camera& cam, GLubyte red, GLubyte green, GLubyte blue);
@@ -47,10 +48,17 @@ public:
     // Sets the tessellation factor.
     void setTessellationFactor(float t);
 
+    // Returns the maximum tessellation factor.
+    float getMaxTessellationFactor() const { return this->maxTessellationFactor; }
+
+    // Sets the maximum tessellation factor.
+    void setMaxTessellationFactor(float t);
+
 protected:
     bool usingLines;
     float scale;
     float tessellationFactor;
+    float maxTessellationFactor;
 
     Texture* elevTex;
     Texture* imageryTex;

@@ -8,17 +8,21 @@
 
 #ifdef AFTR_CONFIG_USE_GDAL // this class won't work without GDAL
 
+// Note: GDAL internally has warnings in their library headers, so I'm doing this to suppress them
+#pragma warning(push, 0)
 #include "cpl_conv.h"
 #include "gdal_priv.h"
+#pragma warning(pop)
 
 using namespace Aftr;
 
 MGLEarthQuad::MGLEarthQuad(WO* parentWO, const Vector& ul, const Vector& lr, unsigned int nTilesX, unsigned int nTilesY,
-    float s, float tess, const std::string& elev, const std::string& imagery)
+    float s, float tess, float maxTess, const std::string& elev, const std::string& imagery)
     : MGL(parentWO)
 {
     this->scale = s;
     this->tessellationFactor = tess;
+    this->maxTessellationFactor = maxTess;
     this->usingLines = false;
     this->elevTex = nullptr;
     this->imageryTex = nullptr;
@@ -52,9 +56,6 @@ MGLEarthQuad::~MGLEarthQuad()
 
 void MGLEarthQuad::render(const Camera& cam)
 {
-
-    this->getModelDataShared()->getModelMeshes().at(0)->getSkin().getShader()->getUniforms()->at(1)->set(this->scale);
-    this->getModelDataShared()->getModelMeshes().at(0)->getSkin().getShader()->getUniforms()->at(2)->set(this->tessellationFactor);
     Model::render(cam);
 }
 
@@ -97,6 +98,20 @@ void MGLEarthQuad::setTessellationFactor(float t)
     // set both skins' tessellation factors
     skin1.getShaderT<GLSLEarthShader>()->setTessellationFactor(this->tessellationFactor);
     skin2.getShaderT<GLSLEarthShader>()->setTessellationFactor(this->tessellationFactor);
+}
+
+void MGLEarthQuad::setMaxTessellationFactor(float t)
+{
+    this->maxTessellationFactor = t;
+
+    // get triangle and line skins
+    ModelMesh* mesh = this->getModelDataShared()->getModelMeshes().at(0);
+    ModelMeshSkin& skin1 = mesh->getSkins().at(0);
+    ModelMeshSkin& skin2 = mesh->getSkins().at(1);
+
+    // set both skins' max tessellation factors
+    skin1.getShaderT<GLSLEarthShader>()->setMaxTessellationFactor(this->maxTessellationFactor);
+    skin2.getShaderT<GLSLEarthShader>()->setMaxTessellationFactor(this->maxTessellationFactor);
 }
 
 void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRight, unsigned int numTilesX, unsigned int numTilesY)
@@ -143,7 +158,7 @@ void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRigh
     ModelMeshSkin skin1;
     skin1.setGLPrimType(GL_PATCHES);
     skin1.setMeshShadingType(MESH_SHADING_TYPE::mstNONE);
-    skin1.setShader(GLSLEarthShader::New(false, scale, tessellationFactor));
+    skin1.setShader(GLSLEarthShader::New(false, scale, tessellationFactor, maxTessellationFactor));
     skin1.setPatchVertices(4);
     skin1.getMultiTextureSet().at(0) = new TextureSharesTexDataOwnsGLHandle(static_cast<TextureDataOwnsGLHandle*>(elevTex->getTextureData()));
     skin1.getMultiTextureSet().push_back(imageryTex);
@@ -152,7 +167,7 @@ void MGLEarthQuad::generateData(const Vector& upperLeft, const Vector& lowerRigh
     ModelMeshSkin skin2;
     skin2.setGLPrimType(GL_PATCHES);
     skin2.setMeshShadingType(MESH_SHADING_TYPE::mstNONE);
-    skin2.setShader(GLSLEarthShader::New(true, scale, tessellationFactor));
+    skin2.setShader(GLSLEarthShader::New(true, scale, tessellationFactor, maxTessellationFactor));
     skin2.setPatchVertices(4);
     skin2.getMultiTextureSet().at(0) = new TextureSharesTexDataOwnsGLHandle(static_cast<TextureDataOwnsGLHandle*>(elevTex->getTextureData()));
     skin2.getMultiTextureSet().push_back(imageryTex->cloneMe());

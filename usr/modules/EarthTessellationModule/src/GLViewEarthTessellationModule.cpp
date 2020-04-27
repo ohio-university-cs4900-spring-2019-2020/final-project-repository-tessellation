@@ -21,11 +21,6 @@
 #include "WO.h"
 #include "WOLight.h"
 #include "WOSkyBox.h"
-#include "WOStatic.h"
-#include "WOStaticPlane.h"
-#include "WOStaticTrimesh.h"
-#include "WOTrimesh.h"
-#include "WOWayPointSpherical.h"
 
 #include "GLSLShader.h"
 #include "GLSLShaderDataShared.h"
@@ -37,6 +32,7 @@ const static unsigned int NUM_TILES_Y = 360;
 
 const static float INIT_SCALE_FACTOR = 0.0001f;
 const static float INIT_TESS_FACTOR = 20.0f;
+const static float INIT_MAX_TESS_FACTOR = 64.0f;
 
 GLViewEarthTessellationModule* GLViewEarthTessellationModule::New(const std::vector<std::string>& args)
 {
@@ -78,7 +74,6 @@ void GLViewEarthTessellationModule::onCreate()
         this->pe->setGravityScalar(Aftr::GRAVITY);
     }
     this->setActorChaseType(STANDARDEZNAV); //Default is STANDARDEZNAV mode
-    //this->setNumPhysicsStepsPerRender( 0 ); //pause physics engine on start up; will remain paused till set to 1
 }
 
 GLViewEarthTessellationModule::~GLViewEarthTessellationModule()
@@ -139,10 +134,29 @@ void GLViewEarthTessellationModule::onKeyDown(const SDL_KeyboardEvent& key)
         MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
 
         // increase/decrease tessellation factor
-        float newTF = mod->getTessellationFactor() + (key.keysym.sym == SDLK_RIGHT ? 0.25f : -0.25f);
+        float newTF = mod->getTessellationFactor() + (key.keysym.sym == SDLK_RIGHT ? 0.5f : -0.5f);
+        newTF = std::max(newTF, 0.0f); // don't allow negative TF
         mod->setTessellationFactor(newTF);
 
         std::cout << "Tessellation factor: " << newTF << std::endl;
+    } else if (key.keysym.sym == SDLK_o || key.keysym.sym == SDLK_i) {
+        MGLEarthQuad* mod = earth->getModelT<MGLEarthQuad>();
+
+        // increase/decrease max tessellation factor
+        float newTF = mod->getMaxTessellationFactor() + (key.keysym.sym == SDLK_o ? 1.0f : -1.0f);
+        newTF = std::max(std::min(newTF, 64.0f), 1.0f); // clamp to range [1, 64]
+        mod->setMaxTessellationFactor(newTF);
+
+        std::cout << "Max tessellation factor: " << newTF << std::endl;
+    } else if (key.keysym.sym == SDLK_SPACE) {
+        // Adjust camera axis of movement to match location on earth.
+        // This makes the camera match what a person would see if they were
+        // standing at that part of the globe.
+        Vector pos = this->cam->getPosition() - earth->getPosition();
+        this->cam->setCameraAxisOfHorizontalRotationViaMouseMotion(pos.normalizeMe());
+    } else if (key.keysym.sym == SDLK_r) {
+        // reset camera axis to default (up)
+        this->cam->setCameraAxisOfHorizontalRotationViaMouseMotion(Vector(0, 0, 1));
     }
 }
 
@@ -167,31 +181,7 @@ void Aftr::GLViewEarthTessellationModule::loadMap()
 
     //SkyBox Textures readily available
     std::vector<std::string> skyBoxImageNames; //vector to store texture paths
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_water+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_dust+6.jpg" );
-    //skyBoxImageNames.push_back(ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_mountains+6.jpg");
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_winter+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/early_morning+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_afternoon+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_cloudy+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_cloudy3+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_day+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_day2+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_deepsun+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_evening+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_morning+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_morning2+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_noon+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/sky_warp+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_Hubble_Nebula+6.jpg" );
     skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_gray_matter+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_easter+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_hot_nebula+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_ice_field+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_lemon_lime+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_milk_chocolate+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_solar_bloom+6.jpg" );
-    //skyBoxImageNames.push_back( ManagerEnvironmentConfiguration::getSMM() + "/images/skyboxes/space_thick_rb+6.jpg" );
 
     float ga = 0.1f; //Global Ambient Light level for this module
     ManagerLight::setGlobalAmbientLight(aftrColor4f(ga, ga, ga, 1.0f));
@@ -219,7 +209,7 @@ void Aftr::GLViewEarthTessellationModule::loadMap()
 
     // create and use earth model
     earth->setModel(new MGLEarthQuad(earth, Vector(90.0f, -180.0f, 0.0f), Vector(-90.0f, 180.0f, 0.0f),
-        NUM_TILES_X, NUM_TILES_Y, INIT_SCALE_FACTOR, INIT_TESS_FACTOR, dataset, imagery));
+        NUM_TILES_X, NUM_TILES_Y, INIT_SCALE_FACTOR, INIT_TESS_FACTOR, INIT_MAX_TESS_FACTOR, dataset, imagery));
     earth->setPosition(Vector(0.0, 0.0, 0.0)); // center earth at origin of world
 
     // add to world

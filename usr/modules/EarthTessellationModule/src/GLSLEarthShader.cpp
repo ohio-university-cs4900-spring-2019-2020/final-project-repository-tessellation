@@ -9,7 +9,7 @@
 #include "Model.h"
 using namespace Aftr;
 
-GLSLEarthShader* GLSLEarthShader::New(bool useLines, float scale, float tess)
+GLSLEarthShader* GLSLEarthShader::New(bool useLines, float scale, float tess, float maxTess)
 {
     // produce strings for the shader programs
     std::string vert = ManagerEnvironmentConfiguration::getLMM() + "shaders/earth.vert";
@@ -39,6 +39,7 @@ GLSLEarthShader* GLSLEarthShader::New(bool useLines, float scale, float tess)
     GLSLEarthShader* shdr = new GLSLEarthShader(shdrData);
     shdr->scaleFactor = scale;
     shdr->tessellationFactor = tess;
+    shdr->maxTessellationFactor = maxTess;
 
     return shdr;
 }
@@ -55,6 +56,7 @@ GLSLEarthShader::GLSLEarthShader(GLSLShaderDataShared* dataShared)
     this->addUniform(new GLSLUniform("MVPMat", utMAT4, this->getHandle()));
     this->addUniform(new GLSLUniform("scale", utFLOAT, this->getHandle()));
     this->addUniform(new GLSLUniform("tessellationFactor", utFLOAT, this->getHandle()));
+    this->addUniform(new GLSLUniform("maxTessellationFactor", utFLOAT, this->getHandle()));
     this->addUniform(new GLSLUniform("elevationTexture", utSAMPLER2D, this->getHandle()));
     this->addUniform(new GLSLUniform("imageryTexture", utSAMPLER2D, this->getHandle()));
 
@@ -62,6 +64,7 @@ GLSLEarthShader::GLSLEarthShader(GLSLShaderDataShared* dataShared)
 
     this->scaleFactor = 0.0f;
     this->tessellationFactor = 0.0f;
+    this->maxTessellationFactor = 64.0f;
 }
 
 GLSLEarthShader::GLSLEarthShader(const GLSLEarthShader& toCopy)
@@ -84,6 +87,7 @@ GLSLEarthShader& Aftr::GLSLEarthShader::operator=(const GLSLEarthShader& shader)
         // Now copy local members from this subclassed instance
         this->scaleFactor = shader.scaleFactor;
         this->tessellationFactor = shader.tessellationFactor;
+        this->maxTessellationFactor = shader.maxTessellationFactor;
     }
     return *this;
 }
@@ -107,10 +111,11 @@ void GLSLEarthShader::bind(const Mat4& modelMatrix, const Mat4& normalMatrix, co
     // bind factors
     this->getUniforms()->at(1)->set(scaleFactor);
     this->getUniforms()->at(2)->set(tessellationFactor);
+    this->getUniforms()->at(3)->set(maxTessellationFactor);
 
     // bind texture unit locations
-    this->getUniforms()->at(3)->set(0);
-    this->getUniforms()->at(4)->set(1);
+    this->getUniforms()->at(4)->set(0);
+    this->getUniforms()->at(5)->set(1);
 }
 
 void GLSLEarthShader::setMVPMatrix(const Mat4& mvpMatrix)
@@ -121,11 +126,17 @@ void GLSLEarthShader::setMVPMatrix(const Mat4& mvpMatrix)
 void GLSLEarthShader::setScaleFactor(float s)
 {
     scaleFactor = s;
-    this->getUniforms()->at(1)->set(s);
+    this->getUniforms()->at(1)->set(scaleFactor);
 }
 
 void GLSLEarthShader::setTessellationFactor(float t)
 {
     tessellationFactor = t;
-    this->getUniforms()->at(2)->set(t);
+    this->getUniforms()->at(2)->set(tessellationFactor);
+}
+
+void GLSLEarthShader::setMaxTessellationFactor(float m)
+{
+    maxTessellationFactor = m;
+    this->getUniforms()->at(3)->set(maxTessellationFactor);
 }
