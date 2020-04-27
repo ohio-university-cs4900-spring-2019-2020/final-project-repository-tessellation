@@ -4,8 +4,9 @@ layout (vertices = 4) out;
 in vec2 vPos[];
 out vec2 vTPos[];
 
-uniform float tessellationFactor;
 uniform float scale;
+uniform float tessellationFactor;
+uniform float maxTessellationFactor;
 
 uniform mat4 MVPMat;
 
@@ -71,9 +72,9 @@ float tessLevel(vec3 a, vec3 b) {
 	return abs(diameter * Cam.Projection[1][1] / screenPos.w) * tessellationFactor;
 }
 
-// clamp tess factor in range [1, 64]
+// Ensure f is <= maxTessellationFactor and then clamp in range [1, 64]
 float clampFactor(float f) {
-	return clamp(f, 1.0, 64.0);
+	return clamp(min(f, 64.0), 1.0, maxTessellationFactor);
 }
 
 void main() {
