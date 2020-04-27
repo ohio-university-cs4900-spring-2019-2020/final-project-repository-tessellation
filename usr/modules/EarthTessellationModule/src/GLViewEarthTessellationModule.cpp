@@ -27,12 +27,19 @@
 
 using namespace Aftr;
 
+// number of tiles to render the earth with
 const static unsigned int NUM_TILES_X = 180;
 const static unsigned int NUM_TILES_Y = 360;
 
+// factors affecting tessellation of the tiles
+// currently tuned to reduce swimming artifacts
 const static float INIT_SCALE_FACTOR = 0.0001f;
-const static float INIT_TESS_FACTOR = 20.0f;
-const static float INIT_MAX_TESS_FACTOR = 64.0f;
+const static float INIT_TESS_FACTOR = 45.0f;
+const static float INIT_MAX_TESS_FACTOR = 16.0f;
+
+// initial position of the camera on earth's surface (in degrees lat lon)
+const static float INIT_LAT = 37.75f;
+const static float INIT_LON = 15.0f;
 
 GLViewEarthTessellationModule* GLViewEarthTessellationModule::New(const std::vector<std::string>& args)
 {
@@ -175,7 +182,20 @@ void Aftr::GLViewEarthTessellationModule::loadMap()
     Axes::isVisible = true;
     this->glRenderer->isUsingShadowMapping(false); // set to TRUE to enable shadow mapping, must be using GL 3.2+
 
-    this->cam->setPosition(15, 15, 10);
+    // calculate camera init position as a vector double
+    VectorD pos(INIT_LAT, INIT_LON, 0);
+    pos = pos.toECEFfromWGS84();
+    pos *= INIT_SCALE_FACTOR * 1.5; // the extra 1.5 is to place the camera above the surface
+
+    // convert to single precision
+    Vector posF = Vector(
+        static_cast<float>(pos.x),
+        static_cast<float>(pos.y),
+        static_cast<float>(pos.z)
+    );
+
+    this->cam->setPosition(posF);
+    this->cam->setCameraLookAtPoint(Vector(0, 0, 0));
 
     // SkyBox Textures readily available
     std::vector<std::string> skyBoxImageNames; // vector to store texture paths
