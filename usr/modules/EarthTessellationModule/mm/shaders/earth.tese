@@ -57,14 +57,23 @@ float biLerp(float a, float b, float c, float d, float s, float t) {
 float biLerpTexture(vec2 uv, int level) {
 	ivec2 size = textureSize(elevationTexture, level);
 
-	float x = size.x * uv.x;
-	float y = size.y * uv.y;
+	// doing modulo here has the effect of repeat wrap.
+	// this is necessary if you try to access outside texture
+	// bounds. (clamp wouldn't be as appropriate here because the
+	// Earth is a sphere.)
+	float x = mod(size.x * uv.x, size.x);
+	float y = mod(size.y * uv.y, size.y);
 
 	int lx = int(floor(x));
-	int ux = int(ceil(x));
+	int ux = int(mod(ceil(x), size.x)); // need to do a mod here as well because rounding up could
+									    // result in an index outside the texture bounds
 
 	int ly = int(floor(y));
-	int uy = int(ceil(y));
+	int uy = int(mod(ceil(y), size.y)); // again, need to do a mod for rounding up
+
+	// Note: We don't need to do a mod for rounding down, because rounding down
+	//       on a number in the range [0, size) cannot result in a value outside
+	//       that range (because floor(0) = 0 and is a decreasing operation).
 
 	float e0 = float(texelFetch(elevationTexture, ivec2(lx, ly), level).r);
 	float e1 = float(texelFetch(elevationTexture, ivec2(ux, ly), level).r);
